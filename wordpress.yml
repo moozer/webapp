@@ -1,0 +1,78 @@
+- hosts: all
+  become: yes
+  user: vagrant
+
+
+
+  vars:
+    wordpress_installs:
+      - name: wordpress
+        dbname: wordpress
+        dbuser: wordpress
+        dbpass: 'heCrE7*d2KEs'
+        dbhost: localhost
+        path: /var/www/html
+        url: http://localhost
+        title: wordpress
+        admin_name: admin
+        admin_email: root@localhost.localdomain
+        admin_password: 'tuFr8=aPra@a'
+        themes:
+          - name: twentytwelve
+            activate: true
+          - name: twentythirteen
+        plugins:
+          - name: contact-form-7
+            activate: false
+          - name: simple-fields
+        users: {}
+        options: []
+        queries: []
+  
+    #mysql_port: 3306                        # The port on which mysql listens
+    #mysql_bind_address: '0.0.0.0'           # The address the mysql server binds on
+    mysql_root_password: 'SomePassword'                 # The new root password
+    mysql_default_root_password: ''         # The root password
+  
+    # List of databases to be created (optional)
+    mysql_databases:
+    - name: "{{ wordpress_installs[0].dbname }}"
+      collation: "utf8_general_ci"        # optional, defaults to "utf8_general_ci"
+      encoding: "utf8"                    # optional, defaults to "utf8"
+
+    # List of users to be created (optional)
+    mysql_users:
+    - name: "{{ wordpress_installs[0].dbuser }}"
+      pass: "{{ wordpress_installs[0].dbpass }}"
+      priv: "*.*:ALL"                     # optional, defaults to "*.*:ALL"
+      host: "%"                           # optional, defaults to "localhost"
+
+
+  pre_tasks:
+  - name: refresh package list
+    apt: update_cache=yes cache_valid_time=3600
+
+  - name: install apache, php and such
+    apt: name={{ item }} state=latest
+    with_items:
+    - apache2
+    - php5
+    - php5-mysql
+    - libapache2-mod-php5
+    
+  roles:
+  - mysql
+  - wordpress
+
+  tasks:
+  - name: delete old index.html
+    file: path=/var/www/html/index.html state=absent
+
+  - name: enable php mysql extension
+    shell: php5enmod mysqli
+    notify:
+    - restart apache
+    
+  handlers:
+  - name restart apache
+    service: name=apache2 state=restart
